@@ -1,13 +1,15 @@
-CXX = g++-4.9
+CXX = g++
 FLAGS = -g -Wall -std=c++11
 EXEC = lab5
-TARGET = lab5
 
-all: $(TARGET).o
-	$(CXX) $(FLAGS) -o $(EXEC) $(TARGET).o
+all: lab5.o Process.o
+	$(CXX) $(FLAGS) -o $(EXEC) lab5.o Process.o
 
-$(TARGET).o: $(TARGET).cpp
-	$(CXX) $(FLAGS) -c $(TARGET).cpp
+lab5.o: lab5.cpp
+	$(CXX) $(FLAGS) -c lab5.cpp
+
+Process.o: Process.cpp
+	$(CXX) $(FLAGS) -c Process.cpp
 
 clean:
 	$(RM) $(TARGET) rm *.o
