@@ -17,10 +17,18 @@ class Process{
 	//Constructor
 	Process(int size);
 
-	
+
+
+
+
 
 	private:
 		int tableSize;
 		std::vector<int> pageTable;
+
+
+
+
+
 };
 #endif //PROCESS
