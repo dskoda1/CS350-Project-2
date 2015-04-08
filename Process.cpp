@@ -3,11 +3,26 @@ using namespace std;
 
 
 //Constructor
-Process::Process(int size)
+Process::Process(int id, int size)
 {
+	pid = id;
 	tableSize = size;
-	pageTable.resize(tableSize);
+	for(int i = 0; i < tableSize; i++)
+	{
+		pageTable.push_back(-1);
+	}
 }
 
+//Locate a page in processes page table
+int Process::locatePage(int pageNum)
+{
+	return(pageTable.at(pageNum));
+}
+
+//Get size of address space
+int Process::getSize()
+{
+	return tableSize;
+}
 
 

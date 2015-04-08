@@ -15,15 +15,18 @@ class Process{
 	~Process();
 
 	//Constructor
-	Process(int size);
+	Process(int id, int size);
 
+	//Locate a page
+	int locatePage(int pageNum);
 
-
-
+	//Size getter
+	int getSize();
 
 
 	private:
 		int tableSize;
+		int pid;
 		std::vector<int> pageTable;
 
 
