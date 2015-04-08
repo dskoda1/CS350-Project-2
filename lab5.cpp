@@ -5,10 +5,21 @@ using namespace std;
 #include <algorithm>
 #include <map>
 
-int main()
+int main(int argc, char ** argv)
 {
-	cout << "Hey I can actually push this" << endl;
-	cout << "I'm editing this from github now." << endl;
+
+/**	Check for appropriate arguments
+**	Must be in the form ./program2 <frames-of-memory> <input-file>
+**/
+	if(argc != 3)
+	{
+		cerr << "Invalid arguments passed: Must be in the form" << endl;
+		cerr << "   ./program2 <frames-of-memory> <input-file>" << endl;
+	}
+
+
+
+
 
 
 	return 0;
