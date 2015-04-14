@@ -47,7 +47,12 @@ int main(int argc, char ** argv)
 		memory.push_back(a);
 	}
 	map<int, Process*> Processes;
+<<<<<<< HEAD
 	bool memNotFull = true;
+=======
+	//made iterator for use with map
+	map<int, Process*>:: iterator iter;
+>>>>>>> d920dad7a97d03d1675a99673401b8b03b678859
 /*
 **	Begin Processing of Input file.
 */
@@ -74,6 +79,16 @@ int main(int argc, char ** argv)
 			ss >> temp;
 			memSize = atoi(temp.c_str());
 			Processes.insert(make_pair(pid, new Process(pid, memSize)));
+		}
+		//Terminate: erase the process with a matching pid to that of input
+		if(!temp.compare("TERMINATE"))
+		{
+			//Setting pid to id of terminating process
+			ss >> temp;
+			pid = atoi(temp.c_str());
+			//Set iterator to terminating process and erase it
+			iter = Processes.find(pid);
+			Processes.erase (iter);
 		}
 		//Reference: access the process to see if the requested
 		//frame is in memory or not
