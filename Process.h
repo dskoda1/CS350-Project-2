@@ -23,6 +23,8 @@ class Process{
 	//Size getter
 	int getSize();
 
+	//Update page table
+	void updateTable(int pageNum, int spotInMemory);
 
 	private:
 		int tableSize;

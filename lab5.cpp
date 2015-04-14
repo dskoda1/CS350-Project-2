@@ -11,12 +11,15 @@
 using namespace std;
 struct memFrame{
 
-	int pid;
+	int id;
 	int pageNum;
 };
 
 //Helper functions for debugging
 void showProcesses(const map<int, Process*>& runningProcs);
+void showMemory(const vector<memFrame *>& mem);
+//Cross check that requested data is in memory
+void checkReference(const vector<memFrame>& physicalMemory, int pid, int page);
 int main(int argc, char ** argv)
 {
 
@@ -31,11 +34,20 @@ int main(int argc, char ** argv)
 
 /**
 **	Allocate the initial physical memory available,
-**	and map used to store processes
+**	and map used to store processes. Also bool to determine
+**	if space is available in memory.
 **/
-	vector<memFrame> memory;
-	memory.resize(atoi(argv[1]));
+	vector<memFrame *> memory;
+	//initialize memory to be empty
+	for(int i = 0; i < atoi(argv[1]); i++)
+	{
+		memFrame * a = new memFrame;
+		a->id = -1;
+		a->pageNum = -1;
+		memory.push_back(a);
+	}
 	map<int, Process*> Processes;
+	bool memNotFull = true;
 /*
 **	Begin Processing of Input file.
 */
@@ -70,20 +82,47 @@ int main(int argc, char ** argv)
 			//First number is process number
 			ss >> temp;
 			pid = atoi(temp.c_str());
-			//Second number is VPN
+			//Second number is VPN- page number in address space of process
 			ss >> temp;
 			vpn = atoi(temp.c_str());
 
 			//Process exists
 			if((rover = Processes.find(pid)) != Processes.end())
 			{
-				if(rover->second->locatePage(vpn) > -1)
+				//Check if frame is in memory from process information
+				if(rover->second->locatePage(vpn)  > -1)
 				{
-					cout << "Found in memory" << endl;
+					//cout << "Found in memory" << endl;
 				}
+				//If not in memory, Check if space to place in mem
+				else if(memNotFull)
+				{	
+					//Iterate through memory 
+					for(int i = 0; i < memory.size(); i++)
+					{
+						//Check for an open spot
+						if(memory.at(i)->id == -1)
+						{
+							//Update the open memory frame
+							cerr << "Found an open spot in memory" << endl;
+							memory.at(i)->id = pid;
+							memory.at(i)->pageNum = vpn;
+							//Update the process as well to reflect a page
+							//being placed in memory
+							rover->second->updateTable(vpn, i);
+							break;
+						}
+					
+					}
+					
+
+
+				}
+				//Else deal with page fault and evict some other page
+				//Not needed till final project submission
 				else
 				{
-					cout << "Not found in memory" << endl;
+					//cout << "Not found in memory" << endl;
 				}
 			}
 			//Dne
@@ -94,9 +133,25 @@ int main(int argc, char ** argv)
 
 		ss.clear();
 	}
-
+	showMemory(memory);
 	showProcesses(Processes);
 	return 0;
+}
+void checkReference(const vector<memFrame>& physicalMemory, int id, int page)
+{
+	
+	
+
+}
+
+void showMemory(const vector<memFrame *>& mem)
+{
+
+	for(auto rover : mem)
+	{
+		cout << "Process " << rover->id << ", page number: " << rover->pageNum << endl;
+
+	}
 }
 
 void showProcesses(const map<int, Process*>&  runningProcs)

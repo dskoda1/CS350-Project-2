@@ -25,4 +25,9 @@ int Process::getSize()
 	return tableSize;
 }
 
+//Update the page table to reflect a page being placed in memory
+void Process::updateTable(int pageNum, int spotInMemory)
+{
+	pageTable.at(pageNum) = spotInMemory;	
 
+}
