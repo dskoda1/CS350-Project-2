@@ -6,7 +6,7 @@ using namespace std;
 Process::Process(int id, int size)
 {
 	pid = id;
-	tableSize = size;
+	tableSize = size+1;
 	for(int i = 0; i < tableSize; i++)
 	{
 		pageTable.push_back(-1);

@@ -9,7 +9,11 @@
 #include <fstream>
 #include "Process.h"
 using namespace std;
+struct memFrame{
 
+	int pid;
+	int pageNum;
+};
 
 //Helper functions for debugging
 void showProcesses(const map<int, Process*>& runningProcs);
@@ -29,7 +33,7 @@ int main(int argc, char ** argv)
 **	Allocate the initial physical memory available,
 **	and map used to store processes
 **/
-	vector<int> memory;
+	vector<memFrame> memory;
 	memory.resize(atoi(argv[1]));
 	map<int, Process*> Processes;
 /*
@@ -37,16 +41,18 @@ int main(int argc, char ** argv)
 */
 	stringstream ss;
 	string temp, line;
-	int pid = 0, memSize = 0;
+	int pid = 0, memSize = 0, vpn = 0;
 	ifstream in;
 
 	in.open(argv[2], ifstream::in);
+	auto rover = Processes.begin();
 	while(in.good() && getline(in, line))
 	{
 		ss << line;
 		ss >> temp;
 		
 		//Check which type of command new line is
+		//Start: create a new process and add to map
 		if(!temp.compare("START"))
 		{
 			//First number is process number
@@ -57,6 +63,35 @@ int main(int argc, char ** argv)
 			memSize = atoi(temp.c_str());
 			Processes.insert(make_pair(pid, new Process(pid, memSize)));
 		}
+		//Reference: access the process to see if the requested
+		//frame is in memory or not
+		if(!temp.compare("REFERENCE"))
+		{	
+			//First number is process number
+			ss >> temp;
+			pid = atoi(temp.c_str());
+			//Second number is VPN
+			ss >> temp;
+			vpn = atoi(temp.c_str());
+
+			//Process exists
+			if((rover = Processes.find(pid)) != Processes.end())
+			{
+				if(rover->second->locatePage(vpn) > -1)
+				{
+					cout << "Found in memory" << endl;
+				}
+				else
+				{
+					cout << "Not found in memory" << endl;
+				}
+			}
+			//Dne
+			else
+			{
+			}	
+		}
+
 		ss.clear();
 	}
 
@@ -70,7 +105,7 @@ void showProcesses(const map<int, Process*>&  runningProcs)
 	for(auto rover : runningProcs)
 	{
 		cout << "Process " << rover.first << endl;
-		for (int i = 0; i < rover.second->getSize(); i++)
+		for (int i = 1; i < rover.second->getSize(); i++)
 		{
 			cout << "Page " << i << " in memory location: " << rover.second->locatePage(i) << endl;
 		}

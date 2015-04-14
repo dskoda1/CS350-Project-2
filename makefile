@@ -12,4 +12,4 @@ Process.o: Process.cpp
 	$(CXX) $(FLAGS) -c Process.cpp
 
 clean:
-	$(RM) $(TARGET) rm *.o
+	$(RM) $(TARGET) rm *.o lab5
