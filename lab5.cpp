@@ -88,7 +88,8 @@ int main(int argc, char ** argv)
 				//Reassign memory values to -1
 				for(int i = 0; i < memory.size(); i++)
 				{
-					if(memory.at(i)->id = pid){
+					if(memory.at(i)->id == pid)
+					{
 						memory.at(i)->id = -1;
 						memory.at(i)->pageNum = -1; 
 					}				
