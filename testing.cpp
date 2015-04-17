@@ -5,21 +5,31 @@
 #include <fstream>
 #include <sstream>
 #include <time.h>
+using namespace std;
 //Creates input files to test Program 2
 
 int main(int argc, char ** argv){
 
+	int numProc;//number of processes, change later
+	int addrSize;//address space size, change later
+	int numRef;//number of references, change later
+
+	cout << "Enter number of processes:\n";
+	cin >> numProc;	
+	cout << "Enter address space size:\n";
+	cin >> addrSize;
+	cout << "Enter number of references:\n";
+	cin >> numRef;
+
 	srand(time(NULL));
 	int x,y;//used as random numbers later
 
-	int procNum = 5;//number of processes, change later
-	int addrSize = 5;//address space size, change later
-	int numRef = 10;//number of references, change later
+	
 
 	std::ofstream testfile;
 	testfile.open("input.txt");
 	//write START lines to file
-	for(int i = 1; i < procNum + 1; i++)
+	for(int i = 1; i < numProc + 1; i++)
 	{
 		testfile << "START " << i << " " << addrSize << "\n";
 
@@ -27,13 +37,13 @@ int main(int argc, char ** argv){
 	//write REFERENCE lines to file
 	for(int i = 0; i < numRef; i++){
 		
-		x = rand() % procNum + 1;
+		x = rand() % numProc + 1;
 		y = rand() % addrSize +  1;
 		testfile << "REFERENCE " << x << " " << y << "\n";
 
 	}
 	//write TERMINATE lines to file
-	for(int i = 1; i < procNum + 1; i++){
+	for(int i = 1; i < numProc + 1; i++){
 		
 		testfile << "TERMINATE " << i << "\n";
 
