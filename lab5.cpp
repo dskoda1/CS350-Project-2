@@ -7,6 +7,8 @@
 #include <sstream>
 #include <string>
 #include <fstream>
+#include <time.h>
+#include <cstdlib>
 #include "Process.h"
 using namespace std;
 struct memFrame{
@@ -20,6 +22,11 @@ void showProcesses(const map<int, Process*>& runningProcs);
 void showMemory(const vector<memFrame *>& mem);
 //Cross check that requested data is in memory
 void checkReference(const vector<memFrame>& physicalMemory, int pid, int page);
+//Functions to reference for specific algorithms
+void ramRef(Process * process , vector<memFrame *>& ram, int vpn);
+//Global variables
+bool ramNotFull, lruNotFull, fifoNotFull;
+int ramHit, lruHit, fifoHit, totalRef;
 int main(int argc, char ** argv)
 {
 
@@ -34,20 +41,41 @@ int main(int argc, char ** argv)
 
 /**
 **	Allocate the initial physical memory available,
-**	and map used to store processes. Also bool to determine
+**	and map used to store processes. Need three vectors
+**  for each different algorithm. Also bool to determine
 **	if space is available in memory.
 **/
-	vector<memFrame *> memory;
+	vector<memFrame *> ram;
+	vector<memFrame *> lru;
+	vector<memFrame *> fifo;	
+
+/**	Initialize counters for hit rates **/
+	ramHit = 0;
+	lruHit = 0;
+	fifoHit = 0;
+	int totalRef = 0;
+
+/**Initialize global bools for memory **/
+	ramNotFull = true;
+	lruNotFull = true;
+	fifoNotFull = true;
 	//initialize memory to be empty
 	for(int i = 0; i < atoi(argv[1]); i++)
 	{
 		memFrame * a = new memFrame;
 		a->id = -1;
 		a->pageNum = -1;
-		memory.push_back(a);
+		ram.push_back(a);
+		memFrame * b = new memFrame;
+		b->id = -1;
+		b->pageNum = -1;
+		lru.push_back(b);
+		memFrame * c = new memFrame;
+		c->id = -1;
+		c->pageNum = -1;
+		fifo.push_back(c);
 	}
 	map<int, Process*> Processes;
-	bool memNotFull = true;
 	//made iterator for use with map
 	map<int, Process*>:: iterator iter;
 /*
@@ -86,14 +114,24 @@ int main(int argc, char ** argv)
 			if((iter = Processes.find(pid)) != Processes.end())
 			{
 				//Reassign memory values to -1
-				for(int i = 0; i < memory.size(); i++)
+				//And set bools to reflect open spots
+				//IFF some are opened up
+				//TODO: add support for lru and fifo
+				bool ramOpenedUp = false;
+				for(int i = 0; i < ram.size(); i++)
 				{
-					if(memory.at(i)->id == pid)
+					if(ram.at(i)->id == pid)
 					{
-						memory.at(i)->id = -1;
-						memory.at(i)->pageNum = -1; 
+						ram.at(i)->id = -1;
+						ram.at(i)->pageNum = -1;
+						ramOpenedUp = true; 
 					}				
 				}
+				if(ramOpenedUp)
+				{
+					ramNotFull = true;
+				}
+			
 				Processes.erase(iter);
 			}
 		}
@@ -111,41 +149,19 @@ int main(int argc, char ** argv)
 			//Process exists
 			if((iter = Processes.find(pid)) != Processes.end())
 			{
-				//Check if frame is in memory from process information
-				if(iter->second->locatePage(vpn)  > -1)
-				{
-					//cout << "Found in memory" << endl;
-				}
-				//If not in memory, Check if space to place in mem
-				else if(memNotFull)
-				{	
-					//Iterate through memory 
-					for(int i = 0; i < memory.size(); i++)
-					{
-						//Check for an open spot
-						if(memory.at(i)->id == -1)
-						{
-							//Update the open memory frame
-							cerr << "Found an open spot in memory" << endl;
-							memory.at(i)->id = pid;
-							memory.at(i)->pageNum = vpn;
-							//Update the process as well to reflect a page
-							//being placed in memory
-							iter->second->updateTable(vpn, i);
-							break;
-						}
-					
-					}
-					
+				//Call ram reference function
+				ramRef(iter->second, ram, vpn);			
+			
+				
+				//TODO: Call lru reference function
+				//Actually listened in class for a 
+				//second..lets use a stack for this
+				//lruRef(iter->second, lru, vpn);
+	
+				//TODO: Call fifo reference function
+				//fifoRef(iter->second, fifo, vpn);
 
 
-				}
-				//Else deal with page fault and evict some other page
-				//Not needed till final project submission
-				else
-				{
-					//cout << "Not found in memory" << endl;
-				}
 			}
 			//Dne
 			else
@@ -155,11 +171,53 @@ int main(int argc, char ** argv)
 
 		ss.clear();
 	}
-	showMemory(memory);
+	showMemory(ram);
 	showProcesses(Processes);
 	return 0;
 }
-void checkReference(const vector<memFrame>& physicalMemory, int id, int page)
+void ramRef(Process * process, vector<memFrame *>& ram, int vpn)
+{
+				//Check if frame is in memory from process information
+				if(process->locatePage(vpn, 0)  > -1)
+				{
+					//cout << "Found in memory" << endl;
+				}
+				//If not in memory, Check if space to place in mem
+				else if(ramNotFull)
+				{	
+					//Iterate through memory 
+					for(int i = 0; i < ram.size(); i++)
+					{
+						//Check for an open spot
+						if(ram.at(i)->id == -1)
+						{
+							//Update the open memory frame
+							cerr << "Found an open spot in memory" << endl;
+							ram.at(i)->id = process->getPid();
+							ram.at(i)->pageNum = vpn;
+							//Update the process as well to reflect a page
+							//being placed in memory
+							process->updateRamTable(vpn, i);
+							break;
+						}
+						else if(i + 1 == ram.size())
+							ramNotFull = false;
+					
+					}
+
+				}
+				//Third case, memory full, evict a random page
+				else if(!ramNotFull)
+				{
+					srand(time(NULL));
+					int randomPage = rand() % ram.size();
+					cout << "Evicting a random page with number: " << randomPage << "From table with size " << ram.size() <<  endl;
+				}
+
+
+}
+
+void checkReference(const vector<memFrame *>& physicalMemory, int id, int page)
 {
 	
 	
@@ -184,7 +242,7 @@ void showProcesses(const map<int, Process*>&  runningProcs)
 		cout << "Process " << rover.first << endl;
 		for (int i = 1; i < rover.second->getSize(); i++)
 		{
-			cout << "Page " << i << " in memory location: " << rover.second->locatePage(i) << endl;
+			cout << "Page " << i << " in memory location: " << rover.second->locatePage(i, 0) << endl;
 		}
 		cout << endl;
 	}
