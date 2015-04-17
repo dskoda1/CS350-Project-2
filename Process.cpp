@@ -16,21 +16,17 @@ Process::Process(int id, int size)
 }
 //Locate a page in processes page table
 //Table parameter: 0 = ram, 1 = lru, 2 = fifo
-int Process::locatePage(int pageNum, int table)
+int Process::locatePageRam(int pageNum)
 {
-	if(table ==0)
-	{
 		return(ramTable.at(pageNum));
-	}
-	else if(table == 1)
-	{
+}
+int Process::locatePageLru(int pageNum)
+{
 		return(lruTable.at(pageNum));
-	}
-	else if(table == 2)
-	{
+}
+int Process::locatePageFifo(int pageNum)
+{
 		return(fifoTable.at(pageNum));
-	}
-
 }
 
 //Get size of address space

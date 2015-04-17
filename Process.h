@@ -17,8 +17,12 @@ class Process{
 	//Constructor
 	Process(int id, int size);
 
-	//Locate a page
-	int locatePage(int pageNum, int table);
+	//Locate a page in ram
+	int locatePageRam(int pageNum);
+	//Locate a page in lru
+	int locatePageLru(int pageNum);
+	//Locate a page in fifo
+	int locatePageFifo(int pageNum);
 
 	//Size getter
 	int getSize();
