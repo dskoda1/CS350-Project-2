@@ -42,12 +42,9 @@ int main(int argc, char ** argv){
 	if(pattern == 0)//locality of reference case
 	{
 		int refPerProc = numRef / numProc;
-		int extraRef = 0;
-		while(numRef % refPerProc != 0)
-		{
-			refPerProc--;
-			extraRef++;
-		}
+		int remainder = numRef % numProc;
+		
+		
 		
 		//write START lines to file
 		for(int i = 1; i < numProc + 1; i++)
@@ -62,15 +59,17 @@ int main(int argc, char ** argv){
 			{
 				y = rand() % addrSize +  1;
 				testfile << "REFERENCE " << i+1 << " " << y << "\n";
-				/*x = rand() % numProc + 1;
-				
-				testfile << "REFERENCE " << x << " " << y << "\n";
-				*/
+		
 			}
 		}
-		if(extraRef == 1)
+		if(remainder != 0)
 		{
-			testfile << "REFERENCE " << numProc << " " << 1 << "\n";			
+			for(int i = 0; i < remainder; i++)
+			{
+				x = rand() % numProc + 1;
+				y = rand() % addrSize +  1;
+				testfile << "REFERENCE " << x << " " << y << "\n";			
+			}
 		}
 		//write TERMINATE lines to file
 		for(int i = 1; i < numProc + 1; i++){
