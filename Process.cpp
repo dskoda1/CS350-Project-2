@@ -18,15 +18,15 @@ Process::Process(int id, int size)
 //Table parameter: 0 = ram, 1 = lru, 2 = fifo
 int Process::locatePageRam(int pageNum)
 {
-		return(ramTable.at(pageNum));
+	return(ramTable.at(pageNum));
 }
 int Process::locatePageLru(int pageNum)
 {
-		return(lruTable.at(pageNum));
+	return(lruTable.at(pageNum));
 }
 int Process::locatePageFifo(int pageNum)
 {
-		return(fifoTable.at(pageNum));
+	return(fifoTable.at(pageNum));
 }
 
 //Get size of address space

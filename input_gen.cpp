@@ -18,9 +18,9 @@ int main(int argc, char ** argv){
 	int numRef;//number of references, change later
 	int pattern;//pattern used for locality of reference, 0 for locality of ref, 1 for random	
 	
-	if(argc != 5)
+	if(argc != 6)
 	{
-		cerr << "Usage: ./input_gen <num_proc> <proc_addr_size> <#_ref> <pattern> " << endl;
+		cerr << "Usage: ./input_gen <num_proc> <proc_addr_size> <#_ref> <pattern> <filename> " << endl;
 		exit(0);
 	}
 	//Parse command line arguments
@@ -37,7 +37,7 @@ int main(int argc, char ** argv){
 	
 
 	std::ofstream testfile;
-	testfile.open("input.txt");
+	testfile.open(argv[5]);
 	
 	if(pattern == 0)//locality of reference case
 	{

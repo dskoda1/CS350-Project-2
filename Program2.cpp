@@ -15,6 +15,8 @@ struct memFrame{
 
 	int id;
 	int pageNum;
+	//Used for LRU
+	int age;
 };
 
 //Helper functions for debugging
@@ -24,6 +26,9 @@ void showMemory(const vector<memFrame *>& mem);
 void checkReference(const vector<memFrame>& physicalMemory, int pid, int page);
 //Functions to reference for specific algorithms
 void ramRef(map<int, Process*>& runningProcs, Process * process, vector<memFrame *>& ram, int vpn);
+void lruRef(map<int, Process*>& runningProcs, Process * process, vector<memFrame *>& lru, int vpn);
+void updateAges(vector<memFrame *>& lru, int frameAccessed);
+
 //Global variables
 bool ramNotFull, lruNotFull, fifoNotFull;
 int ramHit, lruHit, fifoHit, totalRef;
@@ -70,6 +75,7 @@ int main(int argc, char ** argv)
 		memFrame * b = new memFrame;
 		b->id = -1;
 		b->pageNum = -1;
+		b->age = 0;
 		lru.push_back(b);
 		memFrame * c = new memFrame;
 		c->id = -1;
@@ -78,7 +84,7 @@ int main(int argc, char ** argv)
 	}
 	map<int, Process*> Processes;
 	//made iterator for use with map
-	map<int, Process*>:: iterator iter;
+	map<int, Process*>::iterator iter;
 	/*
 	 **	Begin Processing of Input file.
 	 */
@@ -133,6 +139,26 @@ int main(int argc, char ** argv)
 					ramNotFull = true;
 				}
 
+				bool lruOpenedUp = false;
+				for(u_int i = 0; i < lru.size(); i++)
+				{
+					if(lru.at(i)->id == pid)
+					{
+						lru.at(i)->id = -1;
+						lru.at(i)->pageNum = -1;
+						lru.at(i)->age = 1000000;
+						lruOpenedUp = true; 
+					}				
+				}
+				if(lruOpenedUp)
+				{
+					lruNotFull = true;
+				}
+				
+			
+
+
+
 				Processes.erase(iter);
 			}
 		}
@@ -153,12 +179,10 @@ int main(int argc, char ** argv)
 				totalRef++;
 				//Call ram reference function
 				ramRef(Processes, iter->second, ram, vpn);			
+				
 
-
-				//TODO: Call lru reference function
-				//Actually listened in class for a 
-				//second..lets use a stack for this
-				//lruRef(iter->second, lru, vpn);
+				//Call lru reference function
+				lruRef(Processes, iter->second, lru, vpn);
 
 				//TODO: Call fifo reference function
 				//fifoRef(iter->second, fifo, vpn);
@@ -178,10 +202,90 @@ int main(int argc, char ** argv)
 	//showProcesses(Processes);
 	//Hit rate for ram
 	cout << "Page Fault Rates:" << endl;
-	cout << "RANDOM: " << (float)ramHit / float(totalRef) << endl;
+	cout << "RANDOM: " << ((float(totalRef) - float(ramHit)) / float(totalRef)) * 100 <<  "%" << endl;
+	cout << "LRU: " << ((float(totalRef) - float(lruHit)) / float(totalRef)) * 100 <<  "%" << endl;
 
 
 	return 0;
+}
+void lruRef(map<int, Process*>& runningProcs, Process * process, vector<memFrame *>& lru, int vpn)
+{
+	//Check if frame is in memory from process information
+	if(process->locatePageLru(vpn)  > -1)
+	{
+		lruHit++;
+		//Update ages
+		updateAges(lru, process->locatePageLru(vpn));
+	}
+	//If not in memory, Check if space to place in mem
+	else if(lruNotFull)
+	{
+		//Iterate through memory
+		for(u_int i = 0; i < lru.size(); i++)
+		{
+			//Check for an open spot
+			if(lru.at(i)->id == -1)
+			{
+				//Update LRU memory
+				lru.at(i)->id = process->getPid();
+				lru.at(i)->pageNum = vpn;
+				updateAges(lru, i);
+				//Update Process
+				process->updateLruTable(vpn, i);
+				break;
+			}
+			else if((i + 1) == lru.size())
+			{
+				lruNotFull = false;
+			}
+		}
+	}
+	//If no space in memory, evict the least recently used frame
+	else if(!lruNotFull)
+	{
+		//Search through the LRU memory for the largest age value
+		int oldestMemFrame = 0;
+		int oldestAge = -1000;
+		for(u_int i = 0; i < lru.size(); i++)
+		{
+			//Found an older memory frame
+			if(lru.at(i)->age > oldestAge)
+			{
+				oldestMemFrame = i;
+				oldestAge = lru.at(i)->age;
+			}
+		}
+		//Now evict the oldest memory frame and place the new one in
+		//Update the process which was holding the frame
+		auto iter = runningProcs.begin();
+		//Update processes page table
+		//Protect against acessing a process which does not exist for some reason
+		if((iter = runningProcs.find(lru.at(oldestMemFrame)->id)) != runningProcs.end())
+		{
+			iter->second->updateLruTable(lru.at(oldestMemFrame)->pageNum, -1);
+		}
+		//Update the process that is placing frame in lru
+		process->updateLruTable(vpn, oldestMemFrame);
+		//update the lru table
+		lru.at(oldestMemFrame)->id = process->getPid();
+		lru.at(oldestMemFrame)->pageNum = vpn;
+		updateAges(lru, oldestMemFrame);
+	}	
+
+}
+void updateAges(vector<memFrame *>& lru, int frameAccessed)
+{
+	for(u_int i = 0; i < lru.size(); i++)
+	{
+		if(i == (u_int)frameAccessed)	
+		{
+			lru[i]->age = 0;
+		}
+		else
+		{
+			lru[i]->age++;
+		}
+	}
 }
 void ramRef(map<int, Process*> & runningProcs, Process * process, vector<memFrame *>& ram, int vpn)
 {
@@ -227,6 +331,9 @@ void ramRef(map<int, Process*> & runningProcs, Process * process, vector<memFram
 		}
 		//Update process which is placing page into spot just evicted
 		process->updateRamTable(vpn, randomPage);
+		//Update the ram
+		ram.at(randomPage)->id = process->getPid();
+		ram.at(randomPage)->pageNum = vpn;
 	}
 
 
