@@ -10,6 +10,7 @@
 #include <time.h>
 #include <cstdlib>
 #include "Process.h"
+#include <queue>
 using namespace std;
 struct memFrame{
 
@@ -17,6 +18,8 @@ struct memFrame{
 	int pageNum;
 	//Used for LRU
 	int age;
+	//Used for Fifo
+	int spotInMem;
 };
 
 //Helper functions for debugging
@@ -28,10 +31,12 @@ void checkReference(const vector<memFrame>& physicalMemory, int pid, int page);
 void ramRef(map<int, Process*>& runningProcs, Process * process, vector<memFrame *>& ram, int vpn);
 void lruRef(map<int, Process*>& runningProcs, Process * process, vector<memFrame *>& lru, int vpn);
 void updateAges(vector<memFrame *>& lru, int frameAccessed);
-
+void fifoRef(map<int, Process*>& runningProcs, Process * process, vector<memFrame *>& fifo, int vpn);
 //Global variables
 bool ramNotFull, lruNotFull, fifoNotFull;
 int ramHit, lruHit, fifoHit, totalRef;
+queue<memFrame *> inMemory;
+queue<memFrame *> freeFrames;
 int main(int argc, char ** argv)
 {
 		srand(time(NULL));
@@ -80,6 +85,8 @@ int main(int argc, char ** argv)
 		memFrame * c = new memFrame;
 		c->id = -1;
 		c->pageNum = -1;
+		c->spotInMem = i;
+		freeFrames.push(c);
 		fifo.push_back(c);
 	}
 	map<int, Process*> Processes;
@@ -123,7 +130,7 @@ int main(int argc, char ** argv)
 				//Reassign memory values to -1
 				//And set bools to reflect open spots
 				//IFF some are opened up
-				//TODO: add support for lru and fifo
+				//TODO: add support forfifo
 				bool ramOpenedUp = false;
 				for(u_int i = 0; i < ram.size(); i++)
 				{
@@ -138,7 +145,7 @@ int main(int argc, char ** argv)
 				{
 					ramNotFull = true;
 				}
-
+				//LRU termination handling
 				bool lruOpenedUp = false;
 				for(u_int i = 0; i < lru.size(); i++)
 				{
@@ -154,7 +161,37 @@ int main(int argc, char ** argv)
 				{
 					lruNotFull = true;
 				}
-				
+				//FIFO termination handling
+				//Need to go through inMemory queue removing frames with matching ids
+				//and also then go through memory resetting matching frames
+				memFrame * temp;
+				int adjustedSize = inMemory.size();
+				for(int i = 0; i < adjustedSize; i++)
+				{
+					//Remove first memFrame and check
+					temp = inMemory.front();
+					inMemory.pop();
+					if(temp->id == pid)
+					{	//Do not add back to end of queue
+						adjustedSize--;
+						continue;
+					}
+					else
+					{
+						inMemory.push(temp);
+					}
+				}
+
+				bool fifoOpenedUp = false;
+				for(u_int i = 0; i < fifo.size(); i++)
+				{
+					if(fifo.at(i)->id == pid)
+					{
+						fifo.at(i)->id = -1;
+						fifo.at(i)->pageNum = -1;
+						fifoOpenedUp = true;
+					}
+				}
 			
 
 
@@ -184,8 +221,8 @@ int main(int argc, char ** argv)
 				//Call lru reference function
 				lruRef(Processes, iter->second, lru, vpn);
 
-				//TODO: Call fifo reference function
-				//fifoRef(iter->second, fifo, vpn);
+				//Call fifo reference function
+				fifoRef(Processes, iter->second, fifo, vpn);
 
 
 			}
@@ -204,9 +241,58 @@ int main(int argc, char ** argv)
 	cout << "Page Fault Rates:" << endl;
 	cout << "RANDOM: " << ((float(totalRef) - float(ramHit)) / float(totalRef)) * 100 <<  "%" << endl;
 	cout << "LRU: " << ((float(totalRef) - float(lruHit)) / float(totalRef)) * 100 <<  "%" << endl;
+	cout << "FIFO: " << ((float(totalRef) - float(fifoHit)) / float(totalRef)) * 100 <<  "%" << endl;
 
 
 	return 0;
+}
+void fifoRef(map<int, Process*>& runningProcs, Process * process, vector<memFrame *>& fifo, int vpn)
+{
+	//Check if frame is in memory from process info
+	if(process->locatePageFifo(vpn)  > -1)
+	{
+		fifoHit++;
+	}
+	//If not in memory, but memory not full take a free frame
+	else if(fifoNotFull && !freeFrames.empty())
+	{
+		//Take control of a free frame
+		memFrame * mallocFrame = freeFrames.front();
+		freeFrames.pop();
+		//Set data to be accurate
+		mallocFrame->id = process->getPid();
+		mallocFrame->pageNum = vpn;
+		//Update Process to reflect placing a page in memory
+		process->updateFifoTable(vpn, mallocFrame->spotInMem);
+		//Push frame into back of queue
+		inMemory.push(mallocFrame);
+
+		//Check if no more free frames, to update bool
+		if(freeFrames.empty())
+		{
+			fifoNotFull = false;
+		}
+	}
+	//If memory not full, evict the frame that has been
+	//resident longest in memory
+	else if(!fifoNotFull)
+	{
+		memFrame* evicted = inMemory.front();
+		inMemory.pop();
+	
+		//First update old process which was holding the evicted frame
+		auto iter = runningProcs.begin();
+		if((iter = runningProcs.find(evicted->id)) != runningProcs.end())
+		{
+			iter->second->updateFifoTable(evicted->pageNum, -1);
+		}
+		//Old process is now not in possesion of frame, so update new process
+		process->updateFifoTable(vpn, evicted->spotInMem);
+		//Now update evicted frame and place it back into memory
+		evicted->id = process->getPid();
+		evicted->pageNum = vpn;
+		inMemory.push(evicted);	
+	}
 }
 void lruRef(map<int, Process*>& runningProcs, Process * process, vector<memFrame *>& lru, int vpn)
 {
