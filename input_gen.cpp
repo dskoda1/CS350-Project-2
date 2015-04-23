@@ -111,10 +111,10 @@ int main(int argc, char ** argv){
 
 		}
 		//Each process gets 10 turns to go
-		int refsToGo[numProc];
+		int refsToGo[numProc + 1];
 		int process = 0, y = 0;
 		int refsPerProc = numRef / (numProc*10);
-		for(int i = 0; i < numProc; i++)
+		for(int i = 1; i < numProc + 1; i++)
 		{
 			refsToGo[i] = 10;
 		}
@@ -125,6 +125,7 @@ int main(int argc, char ** argv){
 			//Process picked still has some references to go
 			if(refsToGo[process] > 0)
 			{
+				refsToGo[process]--;
 				for(int i = 0; i < refsPerProc; i++)
 				{
 					y = rand() % addrSize;
@@ -133,9 +134,26 @@ int main(int argc, char ** argv){
 				}
 			}
 			//else terminate process
-			
+			else if(refsToGo[process]  == 0)
+			{
+				refsToGo[process] = -1;
+				testfile << "TERMINATE " << process << "\n";
+			}	
 
 		}	
+		//Terminate any processes not terminated in loop above
+		for(int i = 1; i < numProc + 1; i++)
+		{
+			if(refsToGo[i] != -1)
+			{
+				testfile << "TERMINATE " << i << "\n";
+
+			}
+
+		}
+
+
+
 	}
 	
 	
