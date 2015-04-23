@@ -28,7 +28,6 @@ int main(int argc, char ** argv){
 	addrSize = atoi(argv[2]);
 	numRef = atoi(argv[3]);
 	pattern = atoi(argv[4]);
-	//TODO: parse pattern string
 
 
 	srand(time(NULL));

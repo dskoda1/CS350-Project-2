@@ -130,7 +130,6 @@ int main(int argc, char ** argv)
 				//Reassign memory values to -1
 				//And set bools to reflect open spots
 				//IFF some are opened up
-				//TODO: add support forfifo
 				bool ramOpenedUp = false;
 				for(u_int i = 0; i < ram.size(); i++)
 				{
