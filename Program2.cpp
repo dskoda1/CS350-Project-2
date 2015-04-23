@@ -48,6 +48,7 @@ int main(int argc, char ** argv)
 	{
 		cerr << "Invalid arguments passed: Must be in the form" << endl;
 		cerr << "   ./program2 <frames-of-memory> <input-file>" << endl;
+		exit(0);
 	}
 
 	/**

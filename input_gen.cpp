@@ -16,7 +16,8 @@ int main(int argc, char ** argv){
 	int numProc;//number of processes, change later
 	int addrSize;//address space size, change later
 	int numRef;//number of references, change later
-	int pattern;//pattern used for locality of reference, 0 for locality of ref, 1 for random	
+	int pattern;//pattern used for locality of reference, 0 for locality of ref, 1 for random,
+	//2 for locality but choosing random processes each time
 	
 	if(argc != 6)
 	{
@@ -40,10 +41,10 @@ int main(int argc, char ** argv){
 	
 	if(pattern == 0)//locality of reference case
 	{
-		int refPerProc = numRef / numProc;
-		int remainder = numRef % numProc;
-		
-		
+		//Pretend like there is 5 times as many processes
+		//This way each process issues references 5 times
+		int refPerProc = numRef / (numProc*5);
+		int remainder = numRef % numProc;		
 		
 		//write START lines to file
 		for(int i = 1; i < numProc + 1; i++)
@@ -52,12 +53,13 @@ int main(int argc, char ** argv){
 		}
 
 		//write REFERENCE lines to file
-		for(int i = 0; i < numProc; i++)
+		for(int i = 0; i < numProc*5; i++)
 		{	
 			for(int j = 0; j < refPerProc; j++)
 			{
 				y = rand() % addrSize +  1;
-				testfile << "REFERENCE " << i+1 << " " << y << "\n";
+				//(i+1)%numProc + 1 ensures valid process number, doesnt always start at 0
+				testfile << "REFERENCE " << (i+1)%numProc+1 << " " << y << "\n";
 		
 			}
 		}
@@ -76,9 +78,7 @@ int main(int argc, char ** argv){
 
 		}
 	}
-
-
-	if(pattern == 1)//random access case
+	else if(pattern == 1)//random access case
 	{
 		//write START lines to file
 		for(int i = 1; i < numProc + 1; i++)
@@ -101,6 +101,43 @@ int main(int argc, char ** argv){
 
 		}
 	}
+	//Random process issuing references with locality
+	else if(pattern == 2)
+	{
+		//write START lines to file
+		for(int i = 1; i < numProc + 1; i++)
+		{
+			testfile << "START " << i << " " << addrSize << "\n";
+
+		}
+		//Each process gets 10 turns to go
+		int refsToGo[numProc];
+		int process = 0, y = 0;
+		int refsPerProc = numRef / (numProc*10);
+		for(int i = 0; i < numProc; i++)
+		{
+			refsToGo[i] = 10;
+		}
+		//Go until no more references
+		while(numRef > 0)
+		{
+			process = rand() % numProc + 1;
+			//Process picked still has some references to go
+			if(refsToGo[process] > 0)
+			{
+				for(int i = 0; i < refsPerProc; i++)
+				{
+					y = rand() % addrSize;
+					testfile << "REFERENCE " << process << " " << y << endl;
+					numRef--;
+				}
+			}
+			//else terminate process
+			
+
+		}	
+	}
+	
 	
 	testfile.close();
 	return 0;
